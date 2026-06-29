@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <title>monday.com vs Peers — First Folds</title>
+  <style>
+    :root{
+      --bg:#080808; --surface:#0d0d0d; --border:#1c1c1c;
+      --text:#f0f0f0; --dim:#666; --accent:#ff2d2d; --mday:#6161ff;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{width:100vw;height:100vh;overflow:hidden;background:var(--bg);
+              font-family:'Poppins',sans-serif;color:var(--text);}
+    /* 3 columns × 2 rows = 6 first folds */
+    .grid{height:100vh;display:grid;grid-template-columns:repeat(3,1fr);
+          grid-template-rows:repeat(2,1fr);gap:12px;padding:12px;}
+    .tile{position:relative;display:flex;flex-direction:column;overflow:hidden;
+          border-radius:10px;background:var(--surface);border:1px solid var(--border);
+          box-shadow:0 6px 18px rgba(0,0,0,.35);}
+    .tile.me{border-color:var(--mday);box-shadow:0 0 0 1px var(--mday),0 6px 22px rgba(97,97,255,.25);}
+
+    .label{flex-shrink:0;height:clamp(30px,4vh,46px);display:flex;align-items:center;
+           gap:8px;padding:0 12px;background:rgba(8,8,8,.96);border-bottom:1px solid var(--border);z-index:3;}
+    .fav{width:16px;height:16px;border-radius:3px;flex-shrink:0;}
+    .sname{font-size:clamp(12px,1.05vw,16px);font-weight:700;color:#fff;white-space:nowrap;}
+    .badge{font-size:clamp(7px,0.7vw,10px);font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+           color:#fff;background:var(--mday);padding:2px 7px;border-radius:4px;margin-left:6px;}
+    .flag{display:none;align-items:center;gap:4px;margin-left:auto;font-size:clamp(7px,0.7vw,10px);
+          font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:var(--accent);
+          padding:2px 8px;border-radius:4px;cursor:pointer;}
+    .flag::before{content:"";width:5px;height:5px;border-radius:50%;background:#fff;}
+    .tile.changed .flag{display:inline-flex;}
+    .tile.changed{box-shadow:inset 0 0 0 2px var(--accent),0 0 18px rgba(255,45,45,.4);}
+    .tile.changed .label{background:rgba(255,45,45,.12);}
+
+    /* first fold only: a pre-cropped 16:9 hero, filling the tile */
+    .shot{flex:1;overflow:hidden;position:relative;}
+    .shot img{position:absolute;inset:0;width:100%;height:100%;display:block;
+              object-fit:cover;object-position:center top;
+              opacity:0;transition:opacity .5s;}
+    .shot img.on{opacity:1;}
+    .spin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+          background:var(--surface);z-index:2;transition:opacity .4s;}
+    .spin.hide{opacity:0;pointer-events:none;}
+    .dot{width:18px;height:18px;border:2px solid var(--border);border-top-color:#2a2a2a;
+         border-radius:50%;animation:rot .8s linear infinite;}
+    @keyframes rot{to{transform:rotate(360deg);}}
+  </style>
+</head>
+<body>
+  <div class="grid" id="grid"></div>
+<script>
+// monday first, then peers by traffic. Only the first fold is shown.
+const SITES=[
+  {name:"monday.com", domain:"monday.com",    me:true},
+  {name:"Notion",     domain:"notion.com"},
+  {name:"Asana",      domain:"asana.com"},
+  {name:"ClickUp",    domain:"clickup.com"},
+  {name:"Airtable",   domain:"airtable.com"},
+  {name:"Smartsheet", domain:"smartsheet.com"},
+];
+const fav=d=>`https://www.google.com/s2/favicons?domain=${d}&sz=32`;
+const bust=Date.now();
+
+// server-side change list (written hourly by the capture job)
+let changed=[];
+fetch(`shots/meta.json?t=${bust}`).then(r=>r.json()).then(m=>{
+  changed=m.changed||[];
+  changed.forEach(d=>{const t=document.getElementById(`tile-${d}`); if(t)t.classList.add('changed');});
+}).catch(()=>{});
+
+const grid=document.getElementById('grid');
+SITES.forEach(s=>{
+  const t=document.createElement('div');
+  t.className='tile'+(s.me?' me':'');
+  t.id=`tile-${s.domain}`;
+  t.innerHTML=`
+    <div class="label">
+      <img class="fav" src="${fav(s.domain)}" alt="">
+      <span class="sname">${s.name}</span>
+      ${s.me?'<span class="badge">Us</span>':''}
+      <span class="flag" title="Homepage changed — click to clear">New</span>
+    </div>
+    <div class="shot">
+      <div class="spin" id="spin-${s.domain}"><div class="dot"></div></div>
+      <img id="img-${s.domain}" src="shots/fold-${s.domain}.png?t=${bust}">
+    </div>`;
+  grid.appendChild(t);
+  const img=document.getElementById(`img-${s.domain}`);
+  const spin=document.getElementById(`spin-${s.domain}`);
+  img.addEventListener('load',()=>{img.classList.add('on');spin.classList.add('hide');});
+  img.addEventListener('error',()=>{spin.innerHTML='<div style="font-size:10px;color:#2a2a2a">Unavailable</div>';});
+  t.addEventListener('click',()=>t.classList.remove('changed'));
+});
+
+// reload hourly to pick up fresh shots
+setInterval(()=>location.reload(), 60*60*1000);
+</script>
+</body>
+</html>
