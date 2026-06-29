@@ -26,8 +26,10 @@ SITES = [
 def dismiss_cookie_banner(page):
     for sel in ["button:has-text('Reject All, Except Strictly Necessary')",
                 "button:has-text('Reject All')", "button:has-text('Reject')",
-                "button:has-text('Decline')", "[aria-label='Close']",
-                "button:has-text('Agree')", "button:has-text('Accept')"]:
+                "button:has-text('Accept Cookies')", "button:has-text('Accept All')",
+                "button:has-text('Accept')", "button:has-text('OK')",
+                "button:has-text('Got it')", "button:has-text('I agree')",
+                "button:has-text('Decline')", "[aria-label='Close']"]:
         try:
             el = page.query_selector(sel)
             if el and el.is_visible():
@@ -53,6 +55,8 @@ def capture(page, url, out, width=1920):
     except Exception:
         pass
     page.evaluate("window.scrollTo(0,0)"); time.sleep(8)
+    dismiss_cookie_banner(page)  # late banners (e.g. Asana) pop after load
+    time.sleep(1)
     page.screenshot(path=out, full_page=True)
     save_fold_crop(out)
 
