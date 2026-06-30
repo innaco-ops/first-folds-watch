@@ -83,13 +83,15 @@ def blank_fraction(path):
         return 0.0
 
 def fingerprint(path):
+    """Stable hash: heavily blurred + downscaled FIRST FOLD only, so animated/
+    rotating heroes don't trip the change flag — only real layout/copy changes do."""
     try:
-        from PIL import Image
-        img = Image.open(path).convert("RGB").resize((100, 140))
-        px = list(img.getdata()); s = 0
-        for i in range(0, len(px), 6):
-            r, g, b = px[i]; s += r + g + b
-        return s
+        from PIL import Image, ImageFilter
+        img = Image.open(path).convert("RGB"); w, _ = img.size
+        fold = img.crop((0, 0, w, min(img.height, int(w * 9 / 16))))
+        small = fold.resize((24, 14)).filter(ImageFilter.GaussianBlur(1.2))
+        px = list(small.getdata())
+        return sum(r + g + b for r, g, b in px)
     except Exception:
         return None
 
@@ -131,7 +133,7 @@ def main():
                     nfp = fingerprint(out)
                     if nfp is not None:
                         new_fp[dom] = nfp; ofp = old_fp.get(dom)
-                        if ofp is not None and abs(nfp - ofp) / max(nfp, ofp, 1) > 0.015:
+                        if ofp is not None and abs(nfp - ofp) / max(nfp, ofp, 1) > 0.08:
                             changed.append(dom)
                     print(f"  ok ({os.path.getsize(out)//1024} KB, {bf:.0%} white)", flush=True)
             except Exception as e:
