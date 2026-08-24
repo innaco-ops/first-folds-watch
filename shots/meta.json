@@ -1,9 +1,7 @@
 {
-  "updated": 1787532648,
+  "updated": 1787538386,
   "changed": [],
   "failed": [
-    "clickup.com",
-    "airtable.com",
-    "smartsheet.com"
+    "clickup.com"
   ]
 }
